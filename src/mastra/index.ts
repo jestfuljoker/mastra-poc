@@ -9,13 +9,14 @@ import {
 	SensitiveDataFilter,
 } from "@mastra/observability";
 import { themeParkAgent } from "./agents/theme-park-agent";
+import { simulateTicketPurchaseWorkflow } from "./workflows/simulate-ticket-purchase-workflow";
 
 export const mastra = new Mastra({
 	bundler: {
 		externals: ["@duckdb/node-bindings"],
 	},
 	agents: { themeParkAgent },
-	tools: {},
+	workflows: { simulateTicketPurchaseWorkflow },
 	storage: new MastraCompositeStore({
 		id: "composite-storage",
 		default: new LibSQLStore({
