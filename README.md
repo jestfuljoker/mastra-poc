@@ -1,58 +1,97 @@
-# mastra-poc
+# Theme Park Agent — Mastra POC
 
-Welcome to your new [Mastra](https://mastra.ai) project! We're excited to see what you build.
+An educational project for exploring AI agents and workflows with [Mastra](https://mastra.ai). The agent helps plan a theme-park visit using live queue information, park data, weather, conversation memory, and a simulated ticket-purchase workflow.
 
-This starter provides you with a general-purpose Mastra agent that can research current information, manage multi-step tasks, work with local files, run approved shell commands, and create recurring schedules.
+> This is a learning project, not a production booking or payment system. The payment step is simulated and never charges a card.
 
-## Features
+## What it can do
 
-- A local `workspace/` for files and command execution (created under `src/mastra/public/workspace/` when running `mastra dev`)
-- Approval gates for file changes, deletions, and shell commands
-- Conversation memory, generated thread titles, and task tracking
-- Built-in web search and direct web page fetching
-- Recurring schedules that persist across restarts
-- Local libSQL storage and DuckDB observability, with optional Turso storage
-- A bundled Mastra skill that helps coding agents use current Mastra APIs
+- Find parks by name and retrieve their Queue-Times park IDs.
+- Fetch current ride wait times and sort attractions from the shortest wait to the longest.
+- Use Firecrawl through MCP to scrape Queue-Times pages for park hours, crowd forecasts, ride status, and attendance information.
+- Retrieve current weather through Open-Meteo when weather is relevant to the plan.
+- Keep conversation context with Mastra Memory.
+- Run a ticket-purchase workflow that validates the park, builds a quote, pauses for approval, simulates a charge, and asks the agent to create a short visit brief after confirmation.
 
-## Get started
+## How it is organized
 
-Set your `OPENAI_API_KEY` in `.env` or in your environment, then run:
+- **Agent:** `src/mastra/agents/theme-park-agent.ts` defines the assistant, its instructions, memory, and tools.
+- **Tools:** `src/mastra/tools/` contains the Queue-Times lookup, live wait-time, weather, and mock-charge tools. Tool input and output contracts use Zod schemas.
+- **MCP:** `src/mastra/mcp/firecrawl-mcp.ts` connects the Firecrawl MCP server and exposes its scraping tool to the agent.
+- **Workflow:** `src/mastra/workflows/simulate-ticket-purchase-workflow/` contains the purchase steps, including human approval and a post-purchase agent call.
+- **Mastra setup:** `src/mastra/index.ts` registers the agent and workflow and configures storage and observability.
 
-```shell
+The workflow currently follows this sequence:
+
+1. Validate the park name.
+2. Calculate the ticket quote.
+3. Suspend and wait for an approval decision.
+4. Simulate the payment if approved.
+5. Ask the theme-park agent for a three-point visit brief.
+
+## Run locally
+
+### Requirements
+
+- Node.js 24 or newer
+- pnpm
+- An OpenAI API key with access to the configured `openai/gpt-6-luna` model
+- A Firecrawl API key for the MCP scraping tool
+
+### Setup
+
+```bash
+pnpm install
+cp .env.example .env
+```
+
+Add your keys to `.env`:
+
+```dotenv
+OPENAI_API_KEY=your-openai-api-key
+FIRECRAWL_API_KEY=your-firecrawl-api-key
+```
+
+Start the development server:
+
+```bash
 pnpm run dev
 ```
 
-Open [http://localhost:4111](http://localhost:4111) in your browser to access [Mastra Studio](https://mastra.ai/docs/studio/overview).
+Open [Mastra Studio](http://localhost:4111) to try the agent, inspect tools, and run the workflow. The workflow graph displays its steps and execution progress.
 
-Select **Agent** in Mastra Studio and try one of these prompts:
+To create a production build:
 
-- `Get the weather forecast for Austin this weekend.`
-- `Create a landing page for a Japanese sakura festival.`
-- `Check the SPCX stock price now, then check it every minute.`
+```bash
+pnpm run build
+```
 
-The agent asks for approval before it changes files or runs commands. When it creates a schedule, it returns an ID that you can use to pause the schedule.
+## Storage and observability
 
-## Workspace safety
+The default storage is `LibSQLStore`. Without Turso credentials, the project uses a local `./mastra.db` file. To use a remote Turso database, add these optional variables to `.env`:
 
-The local filesystem tools stay inside the `workspace/` directory, which resolves relative to the server's working directory (`src/mastra/public/workspace/` during `mastra dev`). Shell commands start in that directory, but `LocalSandbox` does not provide operating-system isolation by default. Review command approvals carefully, and do not expose this template through an unauthenticated public server.
+```dotenv
+TURSO_DATABASE_URL=libsql://your-database.turso.io
+TURSO_AUTH_TOKEN=your-turso-auth-token
+```
 
-## Storage
+Observability uses DuckDB, with Mastra exporters configured in `src/mastra/index.ts`.
 
-The default `file:./mastra.db` database stores agent memory, tasks, and schedules locally. To use Turso, set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `.env`.
+## Data and safety notes
 
-Recurring schedules continue to use model tokens until you pause them. Ask the agent to pause a schedule with the ID returned by `start_schedule`.
+- Queue-Times and Open-Meteo are external data sources; availability and accuracy depend on those services.
+- Firecrawl scraping requires a valid API key.
+- The purchase workflow uses `mockChargeTool`; it generates simulated payment details and does not contact a payment processor.
+- Keep `.env` private. Never commit API keys or database tokens.
 
-## Making it yours
+## Useful links
 
-- Edit `src/mastra/agents/agent.ts` to change the model, instructions, memory, workspace, or approval policy.
-- Edit `src/mastra/tools/` to customize scheduling.
-- Edit `src/mastra/index.ts` to change storage and observability.
-- Add files or reusable skills under `src/mastra/public/workspace/` for the agent to use during `mastra dev`.
+- [Mastra documentation](https://mastra.ai/docs)
+- [Mastra Studio](https://mastra.ai/docs/studio/overview)
+- [Queue-Times](https://queue-times.com/)
+- [Open-Meteo](https://open-meteo.com/)
+- [Firecrawl](https://www.firecrawl.dev/)
 
-## Learn more
+## License
 
-To learn more about Mastra, visit our [documentation](https://mastra.ai/docs/). If you're new to AI agents, check out our [course](https://mastra.ai/learn) and [YouTube videos](https://youtube.com/@mastra-ai). You can also join our [Discord](https://discord.gg/mastra-ai) community to get help and share your projects.
-
-## Deploy to the Mastra platform
-
-The [Mastra platform](https://projects.mastra.ai) provides two products for deploying and managing AI applications built with the Mastra framework. Learn more in the [Mastra platform documentation](https://mastra.ai/docs/mastra-platform/overview).
+Apache-2.0
