@@ -38,3 +38,11 @@ export const resultSchema = z.object({
 });
 
 export type ResultSchema = z.infer<typeof resultSchema>;
+
+export const postPurchaseSummaryResultSchema = resultSchema.extend({
+	summary: z.string().optional(),
+});
+
+export type PostPurchaseSummaryResultSchema = z.infer<
+	typeof postPurchaseSummaryResultSchema
+>;
